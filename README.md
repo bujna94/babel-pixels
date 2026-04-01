@@ -2,10 +2,14 @@
 
 An experiment to visualise the sheer scale of combinatorial spaces — through 2D pixel images and 3D voxels.
 
-![2D B&W mode](images/bw.png)
-![2D RGB mode](images/rgb.png)
 ![3D Voxels mode](images/3d.png)
 ![3D Voxels 50x50x50](images/3d_50x50x50.png)
+![2D B&W mode](images/bw.png)
+![2D RGB mode](images/rgb.png)
+
+## Live Demo
+
+Try it live at **[babelpixels.com](https://babelpixels.com/)**
 
 ## The idea
 
@@ -22,16 +26,16 @@ Somewhere in the 3D space is, for example, a hammer. The most efficient boat tur
 
 ## Features
 
-### 2D Pixels mode
-- **Full-screen random image generation** — B&W (1-bit) or RGB (24-bit)
-- **Instant generation** using `crypto.getRandomValues()`
-- Shows resolution, pixel count, and the total number of possible images
-
 ### 3D Voxels mode
 - **Configurable grid** — any X x Y x Z dimensions (up to 50 x 50 x 50)
 - **Random combination** — generates a random voxel arrangement instantly
 - **3D visualisation** — Three.js with instanced rendering, orbit controls
 - **Stats** — cell count, total combinations, active voxels
+
+### 2D Pixels mode
+- **Full-screen random image generation** — B&W (1-bit) or RGB (24-bit)
+- **Instant generation** using `crypto.getRandomValues()`
+- Shows resolution, pixel count, and the total number of possible images
 
 ## Usage
 
