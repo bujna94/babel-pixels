@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,10 90,30 90,70 50,90 10,70 10,30' fill='%231a2a4a' stroke='%2333aaff' stroke-width='3'/><line x1='50' y1='10' x2='50' y2='50' stroke='%2333aaff' stroke-width='2'/><line x1='10' y1='30' x2='50' y2='50' stroke='%2333aaff' stroke-width='2'/><line x1='90' y1='30' x2='50' y2='50' stroke='%2333aaff' stroke-width='2'/><polygon points='50,10 90,30 50,50 10,30' fill='%2333aaff' opacity='0.3'/></svg>">
+  <title>Babel Pixels</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { overflow-x: hidden; }
+    body {
+      font-family: 'Courier New', monospace;
+      background: #0a0a0f;
+      color: #e0e0e0;
+      overflow-x: hidden;
+      overflow-y: hidden;
+      height: 100vh;
+    }
+
+    #ui {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 10;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 370px;
+      max-height: 100vh;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #335 transparent;
+    }
+
+    h1 { font-size: 22px; color: #7af; text-transform: uppercase; letter-spacing: 2px; }
+
+    @media (max-width: 720px) {
+      body { overflow-x: hidden; overflow-y: auto; height: auto; }
+      #mobile-wrapper { display: flex; flex-direction: column; height: auto; }
+      #canvas-container {
+        width: 100%; height: 50vh; min-height: 280px; position: relative !important;
+      }
+      #canvas2d-wrap {
+        position: relative !important;
+        height: 50vh; min-height: 200px;
+      }
+      #ui {
+        position: relative; max-width: 100%; max-height: none;
+        padding: 10px; overflow-y: visible;
+      }
+      #about {
+        position: relative !important; top: auto !important;
+        right: auto !important; max-width: 100% !important; padding: 0 10px 14px;
+      }
+      h1 { font-size: 15px; }
+      .grid-inputs input { font-size: 16px; padding: 8px 5px; }
+      button { padding: 10px 14px; }
+    }
+
+    .panel {
+      background: rgba(10, 15, 30, 0.95);
+      border: 1px solid #224;
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+    .panel h2 {
+      font-size: 12px; color: #5af; text-transform: uppercase;
+      letter-spacing: 1px; margin-bottom: 6px;
+    }
+
+    .grid-inputs { display: flex; gap: 8px; align-items: center; }
+    .grid-inputs label {
+      display: flex; flex-direction: column; align-items: center;
+      font-size: 12px; color: #889; gap: 4px;
+    }
+    .grid-inputs input {
+      width: 52px; padding: 6px; text-align: center;
+      background: #111; border: 1px solid #335; border-radius: 4px;
+      color: #fff; font-family: inherit; font-size: 16px;
+    }
+    .grid-inputs span { color: #556; font-size: 18px; }
+
+    button {
+      padding: 8px 16px; background: #1a2a4a; border: 1px solid #3af;
+      border-radius: 4px; color: #7cf; font-family: inherit; font-size: 13px;
+      cursor: pointer; transition: background 0.2s;
+    }
+    button:hover { background: #2a3a5a; }
+    button:disabled { opacity: 0.4; cursor: default; }
+
+    .mode-toggle { display: flex; gap: 0; }
+    .mode-toggle button {
+      flex: 1; border-radius: 0; border: 1px solid #335;
+      background: #111; color: #667; font-size: 13px; padding: 9px 0;
+    }
+    .mode-toggle button:first-child { border-radius: 4px 0 0 4px; }
+    .mode-toggle button:last-child { border-radius: 0 4px 4px 0; }
+    .mode-toggle button.active {
+      background: #1a2a4a; color: #7cf; border-color: #3af;
+    }
+
+    .stats { font-size: 13px; line-height: 1.7; }
+    .stats .val { color: #5df; word-break: break-all; }
+    .stats .warn { color: #fa5; }
+
+
+    #mobile-wrapper { width: 100%; height: 100%; }
+    #canvas-container { width: 100%; height: 100%; }
+
+    #canvas2d-wrap {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #000;
+    }
+    #canvas2d {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    #about {
+      position: absolute; top: 14px; right: 14px;
+      z-index: 10; max-width: 350px;
+    }
+    #about .panel {
+      background: rgba(10, 15, 30, 0.95);
+      border: 1px solid #224; border-radius: 6px; padding: 12px 14px;
+    }
+    #about p { font-size: 13px; line-height: 1.65; color: #99a; }
+    #about b.blue { color: #5df; }
+    #about b.orange { color: #fa5; }
+  </style>
+</head>
+<body>
+  <div id="mobile-wrapper">
+  <div id="canvas-container" style="display:none;"></div>
+  <div id="canvas2d-wrap">
+    <canvas id="canvas2d"></canvas>
+  </div>
+  <div id="ui">
+    <div class="panel">
+      <h1>Babel Pixels</h1>
+    </div>
+
+    <div class="panel">
+      <h2>Mode</h2>
+      <div class="mode-toggle">
+        <button id="btnMode2d" class="active">2D Pixels</button>
+        <button id="btnMode3d">3D Voxels</button>
+      </div>
+    </div>
+
+    <!-- ===== 3D panels ===== -->
+    <div id="panels3d" style="display:none;">
+      <div class="panel">
+        <h2>Grid Dimensions <span style="font-weight:normal; color:#667;">(max 50 x 50 x 50)</span></h2>
+        <div class="grid-inputs">
+          <label>X <input type="number" id="dimX" value="3" min="1" max="50"></label>
+          <span>&times;</span>
+          <label>Y <input type="number" id="dimY" value="3" min="1" max="50"></label>
+          <span>&times;</span>
+          <label>Z <input type="number" id="dimZ" value="3" min="1" max="50"></label>
+        </div>
+      </div>
+
+      <div class="panel" style="display:none;">
+        <h2>Compute Backend</h2>
+        <div id="backendInfo" style="font-size:13px; line-height:1.7;">Detecting...</div>
+      </div>
+
+      <div class="panel">
+        <h2>Controls</h2>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button id="btnRandom3d">Random Combination</button>
+        </div>
+      </div>
+
+
+      <div class="panel">
+        <h2>Statistics</h2>
+        <div class="stats">
+          <div>Cells: <span class="val" id="statCells">27</span></div>
+          <div>Total combinations: <span class="val" id="statTotal">134,217,728</span></div>
+
+          <div>Active voxels: <span class="val" id="statActive">0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 2D panels ===== -->
+    <div id="panels2d">
+      <div class="panel">
+        <h2>Image Info</h2>
+        <div class="stats">
+          <div>Resolution: <span class="val" id="stat2dRes">-</span></div>
+          <div>Pixels: <span class="val" id="stat2dPixels">-</span></div>
+          <div>Color mode: <span class="val" id="stat2dColorMode">B&W (1-bit)</span></div>
+          <div>Total images: <span class="val" id="stat2dTotal">-</span></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Color Mode</h2>
+        <div class="mode-toggle">
+          <button id="btnColorBW" class="active">B&W</button>
+          <button id="btnColorRGB">RGB</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Generate</h2>
+        <button id="btnRandom2d">Random Image</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="about">
+    <div class="panel">
+      <h2>About</h2>
+      <div id="about3d" style="display:none;">
+        <p>
+          Every 3D object is just a grid of voxels. Each cell is either
+          on or off, giving <b class="blue">2<sup>cells</sup></b> total
+          arrangements.
+        </p>
+        <p style="margin-top:8px;">
+          The total number of possible shapes is
+          <b class="orange">incomprehensibly large</b>.
+          Somewhere in that space is, for example, a hammer. The most
+          efficient boat turbine ever designed. A model of your future
+          home. A 3D scan of a face you haven't met yet.
+        </p>
+        <p style="margin-top:8px;">
+          Hit <em style="color:#7cf;">Random Combination</em> &mdash;
+          you'll get noise. But in theory, keep hitting it long enough
+          and you'd eventually see any object imaginable. Don't hold
+          your breath.
+        </p>
+        <p style="margin-top:10px; font-size:9px; color:#556;" id="controlsHint">
+          Drag to rotate &middot; Scroll to zoom &middot; Right-drag to pan
+        </p>
+      </div>
+      <div id="about2d">
+        <p>
+          Every image is just a grid of pixels. A screen-sized image at
+          <b class="blue" id="aboutRes">1920&times;1080</b> in RGB has
+          <b class="blue" id="aboutPixels">~6.2 million</b> pixels, each
+          with 16.7 million possible colours.
+        </p>
+        <p style="margin-top:8px;">
+          The total number of possible images is
+          <b class="orange" id="aboutTotal">256<sup>6,220,800</sup></b> &mdash;
+          a number with <b class="orange" id="aboutDigits">millions</b> of digits.
+          Somewhere in that space is every photo ever taken, every painting,
+          every frame of every film. And your face, right now, reading this.
+        </p>
+        <p style="margin-top:8px;">
+          Hit <em style="color:#7cf;">Random Image</em> &mdash; you'll get noise.
+          But in theory, keep hitting it long enough and you'd eventually see
+          the Mona Lisa. Don't hold your breath.
+        </p>
+      </div>
+    </div>
+  </div>
+  </div><!-- /mobile-wrapper -->
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // ========================================================
+    // State
+    // ========================================================
+    let dimX = 3, dimY = 3, dimZ = 3;
+    let totalCells = 27;
+    let totalCombinations = 2n ** 27n;
+    let currentIndex = 0n;
+    let currentMode = '2d'; // '3d' | '2d'
+    let colorMode = 'bw';   // 'bw' | 'rgb'
+
+    // ========================================================
+    // Three.js Visualization
+    // ========================================================
+    const container = document.getElementById('canvas-container');
+    function canvasW() { return container.clientWidth || window.innerWidth; }
+    function canvasH() { return container.clientHeight || window.innerHeight; }
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(canvasW(), canvasH());
+    renderer.setClearColor(0x0a0a0f);
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, canvasW() / canvasH(), 0.1, 1000);
+    const orbitControls = new OrbitControls(camera, renderer.domElement);
+    orbitControls.enableDamping = true;
+    orbitControls.dampingFactor = 0.08;
+    scene.add(new THREE.AmbientLight(0x334455, 1.5));
+    const dl1 = new THREE.DirectionalLight(0xffffff, 1.2); dl1.position.set(5, 10, 7); scene.add(dl1);
+    const dl2 = new THREE.DirectionalLight(0x4488ff, 0.4); dl2.position.set(-5, -2, -5); scene.add(dl2);
+
+    let gridHelper, wireframe, instancedMesh;
+    const voxelGeo = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+    const voxelMat = new THREE.MeshPhysicalMaterial({ color: 0x33aaff, metalness: 0.1, roughness: 0.3, transparent: true, opacity: 0.85 });
+    const dummy = new THREE.Object3D();
+    const tmpColor = new THREE.Color();
+
+    function rebuildScene() {
+      if (gridHelper) scene.remove(gridHelper);
+      const m = Math.max(dimX, dimZ);
+      gridHelper = new THREE.GridHelper(m, m, 0x222244, 0x111133);
+      gridHelper.position.set((dimX - 1) / 2, -0.5, (dimZ - 1) / 2);
+      scene.add(gridHelper);
+      if (wireframe) scene.remove(wireframe);
+      const geo = new THREE.BoxGeometry(dimX, dimY, dimZ);
+      wireframe = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x4477aa, transparent: true, opacity: 0.7 }));
+      wireframe.position.set((dimX - 1) / 2, (dimY - 1) / 2, (dimZ - 1) / 2);
+      scene.add(wireframe);
+      const center = new THREE.Vector3((dimX - 1) / 2, (dimY - 1) / 2, (dimZ - 1) / 2);
+      orbitControls.target.copy(center);
+      const dist = Math.max(dimX, dimY, dimZ) * 2.5;
+      camera.position.set(center.x + dist, center.y + dist * 0.7, center.z + dist);
+    }
+
+    const MAX_RENDER_CELLS = 125000; // 50^3
+
+    function buildVoxels(index) {
+      if (instancedMesh) scene.remove(instancedMesh);
+
+      // For huge grids, count active bits without iterating every cell
+      let count = 0;
+      for (let t = index; t > 0n; t >>= 1n) count += Number(t & 1n);
+      document.getElementById('statActive').textContent = fmt(count);
+
+      if (count === 0 || totalCells > MAX_RENDER_CELLS) return;
+
+      instancedMesh = new THREE.InstancedMesh(voxelGeo, voxelMat, count);
+      let i = 0;
+      for (let z = 0; z < dimZ; z++)
+        for (let y = 0; y < dimY; y++)
+          for (let x = 0; x < dimX; x++) {
+            if ((index >> BigInt(z * dimX * dimY + y * dimX + x)) & 1n) {
+              dummy.position.set(x, y, z); dummy.updateMatrix();
+              instancedMesh.setMatrixAt(i, dummy.matrix);
+              const t = dimY > 1 ? y / (dimY - 1) : 0.5;
+              tmpColor.setHSL(0.55 + t * 0.15, 0.7, 0.45 + t * 0.2);
+              instancedMesh.setColorAt(i, tmpColor);
+              i++;
+            }
+          }
+      scene.add(instancedMesh);
+    }
+
+    (function animate() {
+      requestAnimationFrame(animate);
+      if (currentMode === '3d') { orbitControls.update(); renderer.render(scene, camera); }
+    })();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = canvasW() / canvasH();
+      camera.updateProjectionMatrix();
+      renderer.setSize(canvasW(), canvasH());
+      if (currentMode === '2d') {
+        resize2dCanvas();
+      }
+    });
+
+    // ========================================================
+    // 2D Babel Image
+    // ========================================================
+    const canvas2d = document.getElementById('canvas2d');
+    const ctx2d = canvas2d.getContext('2d');
+
+    function resize2dCanvas() {
+      canvas2d.width = window.innerWidth;
+      canvas2d.height = window.innerHeight;
+      update2dStats();
+    }
+
+    function update2dStats() {
+      const w = canvas2d.width, h = canvas2d.height;
+      const pixels = w * h;
+      const bitsPerPixel = colorMode === 'bw' ? 1 : 24;
+      const totalBits = pixels * bitsPerPixel;
+      const base = colorMode === 'bw' ? 2 : 256;
+      const count = colorMode === 'bw' ? pixels : pixels * 3;
+      const digits = Math.floor(count * Math.log10(base));
+
+      $('stat2dRes').textContent = w + ' x ' + h;
+      $('stat2dPixels').textContent = fmt(pixels);
+      $('stat2dColorMode').textContent = colorMode === 'bw' ? 'B&W (1-bit)' : 'RGB (24-bit)';
+      $('stat2dTotal').innerHTML = colorMode === 'bw'
+        ? '2<sup>' + fmt(pixels) + '</sup> (~10<sup>' + fmt(Math.floor(pixels * Math.log10(2))) + '</sup>)'
+        : '256<sup>' + fmt(count) + '</sup> (~10<sup>' + fmt(digits) + '</sup>)';
+
+      // Update about panel
+      $('aboutRes').textContent = w + '\u00d7' + h;
+      $('aboutPixels').textContent = '~' + (pixels / 1e6).toFixed(1) + ' million';
+      $('aboutTotal').innerHTML = colorMode === 'bw'
+        ? '2<sup>' + fmt(pixels) + '</sup>'
+        : '256<sup>' + fmt(count) + '</sup>';
+      $('aboutDigits').textContent = digits > 1e6 ? 'millions' : fmt(digits);
+    }
+
+    // crypto.getRandomValues has a 65536-byte limit per call
+    function fillRandom(arr) {
+      const CHUNK = 65536;
+      for (let off = 0; off < arr.length; off += CHUNK) {
+        const end = Math.min(off + CHUNK, arr.length);
+        crypto.getRandomValues(arr.subarray(off, end));
+      }
+    }
+
+    function generateRandom2d() {
+      const w = canvas2d.width, h = canvas2d.height;
+      if (w === 0 || h === 0) return;
+      const imgData = ctx2d.createImageData(w, h);
+      const buf = imgData.data;
+
+      if (colorMode === 'bw') {
+        const rand = new Uint8Array(Math.ceil(w * h / 8));
+        fillRandom(rand);
+        for (let i = 0; i < w * h; i++) {
+          const v = ((rand[i >> 3] >> (i & 7)) & 1) * 255;
+          const off = i * 4;
+          buf[off] = v; buf[off + 1] = v; buf[off + 2] = v; buf[off + 3] = 255;
+        }
+      } else {
+        const rand = new Uint8Array(w * h * 3);
+        fillRandom(rand);
+        for (let i = 0, j = 0; i < buf.length; i += 4, j += 3) {
+          buf[i] = rand[j]; buf[i + 1] = rand[j + 1]; buf[i + 2] = rand[j + 2]; buf[i + 3] = 255;
+        }
+      }
+
+      ctx2d.putImageData(imgData, 0, 0);
+    }
+
+    // ========================================================
+    // UI Helpers
+    // ========================================================
+    const $ = id => document.getElementById(id);
+    function fmt(n) {
+      const s = typeof n === 'bigint' ? n.toString() : String(n);
+      return s.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+    function fmtBigTotal(cells) {
+      if (cells <= 53) return fmt(2n ** BigInt(cells));
+      return '2^' + cells + ' (~10^' + Math.floor(cells * Math.log10(2)) + ')';
+    }
+
+    function showCombination(index) {
+      if (index < 0n) index = 0n;
+      if (index >= totalCombinations) index = totalCombinations - 1n;
+      currentIndex = index;
+      buildVoxels(currentIndex);
+    }
+
+    // ========================================================
+    // Mode Switching
+    // ========================================================
+    function setMode(mode) {
+      currentMode = mode;
+      $('btnMode3d').className = mode === '3d' ? 'active' : '';
+      $('btnMode2d').className = mode === '2d' ? 'active' : '';
+      $('panels3d').style.display = mode === '3d' ? '' : 'none';
+      $('panels2d').style.display = mode === '2d' ? '' : 'none';
+      $('canvas-container').style.display = mode === '3d' ? '' : 'none';
+      $('canvas2d-wrap').style.display = mode === '2d' ? 'flex' : 'none';
+      $('about3d').style.display = mode === '3d' ? '' : 'none';
+      $('about2d').style.display = mode === '2d' ? '' : 'none';
+
+      if (mode === '2d') {
+        // Let layout settle before measuring
+        requestAnimationFrame(() => {
+          resize2dCanvas();
+        });
+      } else {
+        requestAnimationFrame(() => {
+          renderer.setSize(canvasW(), canvasH());
+          camera.aspect = canvasW() / canvasH();
+          camera.updateProjectionMatrix();
+          applyGrid();
+        });
+      }
+    }
+
+    function setColorMode(mode) {
+      colorMode = mode;
+      $('btnColorBW').className = mode === 'bw' ? 'active' : '';
+      $('btnColorRGB').className = mode === 'rgb' ? 'active' : '';
+      update2dStats();
+    }
+
+    // ========================================================
+    // Grid Apply
+    // ========================================================
+    function applyGrid() {
+      dimX = Math.max(1, Math.min(50, parseInt($('dimX').value) || 3));
+      dimY = Math.max(1, Math.min(50, parseInt($('dimY').value) || 3));
+      dimZ = Math.max(1, Math.min(50, parseInt($('dimZ').value) || 3));
+      $('dimX').value = dimX; $('dimY').value = dimY; $('dimZ').value = dimZ;
+      totalCells = dimX * dimY * dimZ;
+      totalCombinations = 2n ** BigInt(totalCells);
+      currentIndex = 0n;
+      $('statCells').textContent = totalCells;
+      $('statTotal').textContent = fmtBigTotal(totalCells);
+      $('statTotal').className = totalCells > 30 ? 'val warn' : 'val';
+      if (totalCells <= MAX_RENDER_CELLS) rebuildScene();
+      showCombination(0n);
+    }
+
+    // ========================================================
+    // Event Listeners
+    // ========================================================
+    let applyTimer = null;
+    function scheduleApply() { clearTimeout(applyTimer); applyTimer = setTimeout(applyGrid, 400); }
+    $('dimX').addEventListener('input', scheduleApply);
+    $('dimY').addEventListener('input', scheduleApply);
+    $('dimZ').addEventListener('input', scheduleApply);
+
+    $('btnRandom3d').addEventListener('click', () => {
+      const bytes = Math.ceil(totalCells / 8);
+      const arr = new Uint8Array(bytes);
+      fillRandom(arr);
+      // Mask excess bits in last byte
+      const excess = totalCells % 8;
+      if (excess) arr[bytes - 1] &= (1 << excess) - 1;
+
+      if (totalCells > MAX_RENDER_CELLS) {
+        // Stats only — count active bits without building BigInt
+        let count = 0;
+        for (let i = 0; i < bytes; i++) {
+          let b = arr[i];
+          b = b - ((b >> 1) & 0x55);
+          b = (b & 0x33) + ((b >> 2) & 0x33);
+          count += (b + (b >> 4)) & 0x0F;
+        }
+        if (instancedMesh) scene.remove(instancedMesh);
+        $('statActive').textContent = fmt(count);
+      } else {
+        // Small grid — convert to BigInt for full rendering
+        let r = 0n;
+        for (let i = bytes - 1; i >= 0; i--) r = (r << 8n) | BigInt(arr[i]);
+        showCombination(r);
+      }
+    });
+
+
+    // Mode toggles
+    $('btnMode3d').addEventListener('click', () => setMode('3d'));
+    $('btnMode2d').addEventListener('click', () => setMode('2d'));
+    $('btnColorBW').addEventListener('click', () => setColorMode('bw'));
+    $('btnColorRGB').addEventListener('click', () => setColorMode('rgb'));
+
+    // 2D controls
+    $('btnRandom2d').addEventListener('click', generateRandom2d);
+
+    // ========================================================
+    // Init
+    // ========================================================
+    function init() {
+      applyGrid();
+
+      // 2D is default — size canvas on load
+      requestAnimationFrame(() => {
+        resize2dCanvas();
+      });
+
+      if ('ontouchstart' in window) {
+        $('controlsHint').textContent = 'Drag to rotate \u00b7 Pinch to zoom \u00b7 Two-finger drag to pan';
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
